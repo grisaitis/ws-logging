@@ -3,6 +3,7 @@ import statistics
 import time
 import websockets
 
+
 async def hello():
     uri = "ws://localhost:8765"
     n = 1000
@@ -10,17 +11,17 @@ async def hello():
     durations_send_await = list(range(n))
     durations_recv = list(range(n))
     async with websockets.connect(uri) as websocket:
-        name = 'william'  # input("What's your name? ")
+        name = "william"  # input("What's your name? ")
         name = "w" * int(2e6)
         for i in durations_send:
             start = time.perf_counter()
             f = websocket.send(name)
             durations_send[i] = time.perf_counter() - start
-            
+
             start = time.perf_counter()
             await f
             durations_send_await[i] = time.perf_counter() - start
-            
+
             start = time.perf_counter()
             await websocket.recv()
             durations_recv[i] = time.perf_counter() - start

@@ -1,9 +1,10 @@
 import asyncio
 import websockets
 
+
 async def hello(websocket, path):
     while True:
-        name = await websocket.recv()
+        await websocket.recv()
         # print(f"< {name}")
 
         # greeting = f"Hello {name}!"
@@ -11,6 +12,7 @@ async def hello(websocket, path):
 
         await websocket.send(greeting)
         # print(f"> {greeting}")
+
 
 start_server = websockets.serve(hello, "localhost", 8765, max_size=int(1e8))
 
