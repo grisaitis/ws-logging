@@ -1,57 +1,83 @@
 import asyncio
 import logging
-from pprint import pprint
+import time
+
+import aiohttp
 
 from ws_logging.handlers.using_websockets_lib import WebsocketsHandler
 from ws_logging.handlers.using_aiohttp import AiohttpHandler
 
 
-root = logging.getLogger()
-root.setLevel("DEBUG")
-# logging.getLogger("ws_logging").setLevel("DEBUG")
-# pprint(logging.root.manager.loggerDict)
+# logging.getLogger().setLevel("DEBUG")
 
-# formatter = logging.Formatter(logging.BASIC_FORMAT)
 logging_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
-print(logger.level)
 
-stream_handler = logging.StreamHandler()
-stream_handler.setFormatter(
-    logging.Formatter("stream_handler - " + logging_format)
-)
-logger.addHandler(stream_handler)
+# stream_handler = logging.StreamHandler()
+# stream_handler.setFormatter(
+#     logging.Formatter("stream_handler - " + logging_format)
+# )
+# logger.addHandler(stream_handler)
 
 
-def log_stuff():
-    logger.debug("debug message")
-    logger.info("info message")
-    logger.warning("warning message")
-    logger.error("error message")
-    logger.critical("critical message")
+def log_stuff(n_times=1):
+    for i in range(n_times):
+        logger.debug(f"wow {i}")
+        logger.info(f"wheeee {i}")
+        logger.warning(f"whoa!! {i}")
+        logger.error(f"ooo {i}")
+        logger.critical(f"yeah {i}")
 
 
 async def log_with_ws_handler():
     logger.debug("make WebsocketsHandler")
-    handler = await WebsocketsHandler.from_server_string(
-        "127.0.0.1", 8080, "ws"
+    t = time.perf_counter()
+    handler = await WebsocketsHandler.from_info("127.0.0.1", 8080, "ws")
+    print("make handler", time.perf_counter() - t)
+    handler.setFormatter(
+        logging.Formatter("WebsocketsHandler - " + logging_format)
     )
-    handler.setFormatter(logging.Formatter("ws_handler - " + logging_format))
     logger.addHandler(handler)
-    log_stuff()
+    t = time.perf_counter()
+    log_stuff(1000)
+    print("log_stuff()", time.perf_counter() - t)
+    t = time.perf_counter()
     await handler.stop()
+    print("handler.stop()", time.perf_counter() - t)
 
 
 async def log_with_aiohttp_handler():
-    handler = AiohttpHandler("127.0.0.1", 8080, "ws")
+    t = time.perf_counter()
+    handler = await AiohttpHandler.from_info("127.0.0.1", 8080, "ws")
+    print("make handler", time.perf_counter() - t)
     handler.setFormatter(
-        logging.Formatter("aiohttp_handler - " + logging_format)
+        logging.Formatter("AiohttpHandler - " + logging_format)
     )
     logger.addHandler(handler)
-    log_stuff()
+    t = time.perf_counter()
+    log_stuff(1000)
+    print("log_stuff()", time.perf_counter() - t)
+    t = time.perf_counter()
+    await handler.stop()
+    print("handler.stop()", time.perf_counter() - t)
 
 
-# asyncio.run(log_with_ws_handler())
-asyncio.run(log_with_aiohttp_handler(), debug=True)
+async def test_aiohttp_client():
+    async with aiohttp.ClientSession() as session:
+        async with session.ws_connect("ws://127.0.0.1:8080/ws") as ws:
+            await ws.send_str("hello, world!")
+
+
+loop = asyncio.get_event_loop()
+# loop.run_until_complete(test_aiohttp_client())
+# loop.run_until_complete(log_with_aiohttp_handler())
+
+t = time.time()
+print("start")
+# loop.run_until_complete(test_aiohttp_client())
+loop.run_until_complete(log_with_ws_handler())
+# loop.run_until_complete(log_with_aiohttp_handler())
+print("total time:", time.time() - t)
+print(len(asyncio.all_tasks(loop)))

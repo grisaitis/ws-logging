@@ -1,5 +1,4 @@
 import logging
-from pprint import pprint
 
 from aiohttp import web
 import ws_logging
@@ -12,6 +11,8 @@ handler.setFormatter(
 )
 logging.getLogger().addHandler(handler)
 logging.getLogger().setLevel("DEBUG")
+logging.getLogger("aiohttp").setLevel("WARNING")
+
 logger = logging.getLogger(__name__)
 
 app = web.Application()

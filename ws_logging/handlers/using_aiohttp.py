@@ -3,31 +3,33 @@ import logging
 
 import aiohttp
 
-logger = logging.getLogger(__name__)
-
-"""
-helpful links
-- docs: https://docs.aiohttp.org/en/stable/client_quickstart.html#websockets
-
-questions
-- does aiohttp have a connection interface that isn't a context manager?
-
-"""
-
 
 class AiohttpHandler(logging.StreamHandler):
-    def __init__(self, host, port, path="ws"):
-        super().__init__()  # should i put stream=None?
-        self.host = host
-        self.port = port
-        self.path = path  # is path the correct name here?
-        self.url = f"ws://{host}:{port}/{path}"
+    terminator = ""
+    stream = None
 
-    async def send_msg_async(self, msg: str):
-        async with aiohttp.ClientSession() as session:
-            async with session.ws_connect(self.url) as ws:
-                await ws.send_str(msg)
+    def __init__(
+        self,
+        session: aiohttp.ClientSession,
+        ws: aiohttp.ClientWebSocketResponse,
+    ):
+        super().__init__()
+        self.session = session
+        self.ws = ws
+        self._unawaited_tasks = set()
 
-    def emit(self, record):
+    @classmethod
+    async def from_info(cls, host: str, port: int, path: str):
+        url = f"ws://{host}:{port}/{path}"
+        session = aiohttp.ClientSession()
+        ws = await session._ws_connect(url)
+        return cls(session, ws)
+
+    def emit(self, record: logging.LogRecord):
         msg = self.format(record)
-        asyncio.create_task(self.send_msg_async(msg))
+        task = asyncio.create_task(self.ws.send_str(msg))
+        self._unawaited_tasks.add(task)
+
+    async def stop(self):
+        await asyncio.wait(self._unawaited_tasks)
+        await self.session.close()
